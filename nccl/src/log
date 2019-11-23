@@ -1,0 +1,201 @@
+Compiling  init.cc                             > /home/parallels/git/misc-software-projects/nccl/build/obj/init.o
+init.cc:238:0: warning: "VERSION_STRING" redefined
+ #define VERSION_STRING "NCCL version " STR(NCCL_MAJOR) "." STR(NCCL_MINOR) "." STR(NCCL_PATCH) NCCL_SUFFIX "+cuda" STR(CUDA_MAJOR) "." STR(CUDA_MINOR)
+ 
+In file included from init.cc:7:0:
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:10:0: note: this is the location of the previous definition
+ #define VERSION_STRING "NOVERSION"
+ 
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:138:64: error: ‘size_t’ has not been declared
+ ncclResult_t  ncclReduce(const void* sendbuff, void* recvbuff, size_t count, ncclDataType_t datatype,
+                                                                ^~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:139:48: error: ‘cudaStream_t’ has not been declared
+     ncclRedOp_t op, int root, ncclComm_t comm, cudaStream_t stream);
+                                                ^~~~~~~~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:140:64: error: ‘size_t’ has not been declared
+ ncclResult_t pncclReduce(const void* sendbuff, void* recvbuff, size_t count, ncclDataType_t datatype,
+                                                                ^~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:141:48: error: ‘cudaStream_t’ has not been declared
+     ncclRedOp_t op, int root, ncclComm_t comm, cudaStream_t stream);
+                                                ^~~~~~~~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:152:37: error: ‘size_t’ has not been declared
+ ncclResult_t  ncclBcast(void* buff, size_t count, ncclDataType_t datatype, int root,
+                                     ^~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:153:22: error: ‘cudaStream_t’ has not been declared
+     ncclComm_t comm, cudaStream_t stream);
+                      ^~~~~~~~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:154:37: error: ‘size_t’ has not been declared
+ ncclResult_t pncclBcast(void* buff, size_t count, ncclDataType_t datatype, int root,
+                                     ^~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:155:22: error: ‘cudaStream_t’ has not been declared
+     ncclComm_t comm, cudaStream_t stream);
+                      ^~~~~~~~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:166:67: error: ‘size_t’ has not been declared
+ ncclResult_t  ncclBroadcast(const void* sendbuff, void* recvbuff, size_t count, ncclDataType_t datatype, int root,
+                                                                   ^~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:167:22: error: ‘cudaStream_t’ has not been declared
+     ncclComm_t comm, cudaStream_t stream);
+                      ^~~~~~~~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:168:67: error: ‘size_t’ has not been declared
+ ncclResult_t pncclBroadcast(const void* sendbuff, void* recvbuff, size_t count, ncclDataType_t datatype, int root,
+                                                                   ^~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:169:22: error: ‘cudaStream_t’ has not been declared
+     ncclComm_t comm, cudaStream_t stream);
+                      ^~~~~~~~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:179:67: error: ‘size_t’ has not been declared
+ ncclResult_t  ncclAllReduce(const void* sendbuff, void* recvbuff, size_t count,
+                                                                   ^~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:180:63: error: ‘cudaStream_t’ has not been declared
+     ncclDataType_t datatype, ncclRedOp_t op, ncclComm_t comm, cudaStream_t stream);
+                                                               ^~~~~~~~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:181:67: error: ‘size_t’ has not been declared
+ ncclResult_t pncclAllReduce(const void* sendbuff, void* recvbuff, size_t count,
+                                                                   ^~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:182:63: error: ‘cudaStream_t’ has not been declared
+     ncclDataType_t datatype, ncclRedOp_t op, ncclComm_t comm, cudaStream_t stream);
+                                                               ^~~~~~~~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:196:5: error: ‘size_t’ has not been declared
+     size_t recvcount, ncclDataType_t datatype, ncclRedOp_t op, ncclComm_t comm,
+     ^~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:197:5: error: ‘cudaStream_t’ has not been declared
+     cudaStream_t stream);
+     ^~~~~~~~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:199:5: error: ‘size_t’ has not been declared
+     size_t recvcount, ncclDataType_t datatype, ncclRedOp_t op, ncclComm_t comm,
+     ^~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:200:5: error: ‘cudaStream_t’ has not been declared
+     cudaStream_t stream);
+     ^~~~~~~~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:212:67: error: ‘size_t’ has not been declared
+ ncclResult_t  ncclAllGather(const void* sendbuff, void* recvbuff, size_t sendcount,
+                                                                   ^~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:213:47: error: ‘cudaStream_t’ has not been declared
+     ncclDataType_t datatype, ncclComm_t comm, cudaStream_t stream);
+                                               ^~~~~~~~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:214:67: error: ‘size_t’ has not been declared
+ ncclResult_t pncclAllGather(const void* sendbuff, void* recvbuff, size_t sendcount,
+                                                                   ^~~~~~
+/home/parallels/git/misc-software-projects/nccl/build/include/nccl.h:215:47: error: ‘cudaStream_t’ has not been declared
+     ncclDataType_t datatype, ncclComm_t comm, cudaStream_t stream);
+                                               ^~~~~~~~~~~~
+In file included from include/transport.h:10:0,
+                 from include/comm.h:10,
+                 from include/channel.h:9,
+                 from init.cc:8:
+include/devcomm.h:36:3: error: ‘int4’ does not name a type; did you mean ‘int’?
+   int4 i4;
+   ^~~~
+   int
+include/devcomm.h:147:3: error: ‘size_t’ does not name a type; did you mean ‘__size_t’?
+   size_t N;
+   ^~~~~~
+   __size_t
+In file included from include/channel.h:9:0,
+                 from init.cc:8:
+include/comm.h:81:3: error: ‘cudaStream_t’ does not name a type; did you mean ‘cudaError_t’?
+   cudaStream_t userStream;
+   ^~~~~~~~~~~~
+   cudaError_t
+include/comm.h:83:3: error: ‘cudaEvent_t’ does not name a type; did you mean ‘cudaError_t’?
+   cudaEvent_t doneEvent;
+   ^~~~~~~~~~~
+   cudaError_t
+include/comm.h:105:3: error: ‘cudaStream_t’ does not name a type; did you mean ‘cudaError_t’?
+   cudaStream_t groupStream;
+   ^~~~~~~~~~~~
+   cudaError_t
+In file included from init.cc:12:0:
+include/group.h:21:69: error: ‘cudaStream_t’ has not been declared
+     ncclDataType_t type, ncclRedOp_t op, int root, ncclComm_t comm, cudaStream_t stream);
+                                                                     ^~~~~~~~~~~~
+In file included from init.cc:13:0:
+include/net.h: In function ‘ncclResult_t ncclNetPtrSupport(int, int*)’:
+include/net.h:56:17: error: ‘cudaFree’ was not declared in this scope
+     if (gpuPtr) cudaFree(gpuPtr);
+                 ^~~~~~~~
+include/net.h:56:17: note: suggested alternative: ‘cudaError’
+     if (gpuPtr) cudaFree(gpuPtr);
+                 ^~~~~~~~
+                 cudaError
+In file included from include/collectives.h:11:0,
+                 from include/enqueue.h:12,
+                 from init.cc:14:
+include/info.h: At global scope:
+include/info.h:35:3: error: ‘cudaStream_t’ does not name a type; did you mean ‘cudaError_t’?
+   cudaStream_t stream;
+   ^~~~~~~~~~~~
+   cudaError_t
+init.cc: In function ‘ncclResult_t commFree(ncclComm_t)’:
+init.cc:147:13: error: ‘struct ncclComm’ has no member named ‘doneEvent’
+   if (comm->doneEvent != NULL)
+             ^~~~~~~~~
+init.cc: In function ‘ncclResult_t commAlloc(ncclComm**, int, int)’:
+init.cc:186:3: error: ‘cudaEvent_t’ was not declared in this scope
+   cudaEvent_t doneEvent;
+   ^~~~~~~~~~~
+init.cc:186:3: note: suggested alternative: ‘cudaError_t’
+   cudaEvent_t doneEvent;
+   ^~~~~~~~~~~
+   cudaError_t
+init.cc:194:3: error: ‘cudaGetDevice’ was not declared in this scope
+   cudaGetDevice(&comm->cudaDev);
+   ^~~~~~~~~~~~~
+init.cc:194:3: note: suggested alternative: ‘ncclNetDevices’
+   cudaGetDevice(&comm->cudaDev);
+   ^~~~~~~~~~~~~
+   ncclNetDevices
+init.cc:198:9: error: ‘struct ncclComm’ has no member named ‘doneEvent’
+   comm->doneEvent = doneEvent;
+         ^~~~~~~~~
+init.cc:198:21: error: ‘doneEvent’ was not declared in this scope
+   comm->doneEvent = doneEvent;
+                     ^~~~~~~~~
+init.cc:198:21: note: suggested alternative: ‘sigevent’
+   comm->doneEvent = doneEvent;
+                     ^~~~~~~~~
+                     sigevent
+init.cc: In function ‘void showVersion()’:
+init.cc:238:96: error: expected ‘)’ before ‘NCCL_SUFFIX’
+ #define VERSION_STRING "NCCL version " STR(NCCL_MAJOR) "." STR(NCCL_MINOR) "." STR(NCCL_PATCH) NCCL_SUFFIX "+cuda" STR(CUDA_MAJOR) "." STR(CUDA_MINOR)
+                                                                                                ^
+init.cc:242:20: note: in expansion of macro ‘VERSION_STRING’
+     printf("%s\n", VERSION_STRING);
+                    ^~~~~~~~~~~~~~
+In file included from include/core.h:65:0,
+                 from include/transport.h:13,
+                 from include/comm.h:10,
+                 from include/channel.h:9,
+                 from init.cc:8:
+init.cc:238:96: error: expected ‘)’ before ‘NCCL_SUFFIX’
+ #define VERSION_STRING "NCCL version " STR(NCCL_MAJOR) "." STR(NCCL_MINOR) "." STR(NCCL_PATCH) NCCL_SUFFIX "+cuda" STR(CUDA_MAJOR) "." STR(CUDA_MINOR)
+                                                                                                ^
+include/debug.h:39:83: note: in definition of macro ‘INFO’
+ #define INFO(FLAGS, ...) ncclDebugLog(NCCL_LOG_INFO, (FLAGS), __func__, __LINE__, __VA_ARGS__)
+                                                                                   ^~~~~~~~~~~
+init.cc:245:27: note: in expansion of macro ‘VERSION_STRING’
+       INFO(NCCL_ALL,"%s", VERSION_STRING); // Also log NCCL version in one of the files
+                           ^~~~~~~~~~~~~~
+init.cc: In function ‘ncclResult_t initParams(ncclComm*)’:
+init.cc:319:11: error: ‘struct cudaLaunchParams’ has no member named ‘stream’
+   params->stream = NULL;
+           ^~~~~~
+init.cc:321:11: error: ‘struct cudaLaunchParams’ has no member named ‘blockDim’
+   params->blockDim.x = 0; params->blockDim.y = params->blockDim.z = 1;
+           ^~~~~~~~
+init.cc:321:35: error: ‘struct cudaLaunchParams’ has no member named ‘blockDim’
+   params->blockDim.x = 0; params->blockDim.y = params->blockDim.z = 1;
+                                   ^~~~~~~~
+init.cc:321:56: error: ‘struct cudaLaunchParams’ has no member named ‘blockDim’
+   params->blockDim.x = 0; params->blockDim.y = params->blockDim.z = 1;
+                                                        ^~~~~~~~
+init.cc:322:11: error: ‘struct cudaLaunchParams’ has no member named ‘gridDim’
+   params->gridDim.x = 0; params->gridDim.y = params->gridDim.z = 1;
+           ^~~~~~~
+init.cc:322:34: error: ‘struct cudaLaunchParams’ has no member named ‘gridDim’
+   params->gridDim.x = 0; params->gridDim.y = params->gridDim.z = 1;
+                                  ^~~~~~~
+init.cc:322:54: error: ‘struct cudaLaunchParams’ has no member named ‘gridDim’
+   params->gridDim.x = 0; params->gridDim.y = params->gridDim.z = 1;
+                                                      ^~~~~~~
+Makefile:111: recipe for target '/home/parallels/git/misc-software-projects/nccl/build/obj/init.o' failed
+make: *** [/home/parallels/git/misc-software-projects/nccl/build/obj/init.o] Error 1
