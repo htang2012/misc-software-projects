@@ -5,7 +5,8 @@
 #
 .PHONY : all clean
 
-default : src.build
+default : src.build 
+test:   test.build
 install : src.install
 BUILDDIR ?= $(abspath ./build)
 ABSBUILDDIR := $(abspath $(BUILDDIR))
