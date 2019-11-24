@@ -6,7 +6,7 @@
 
 #include "nccl.h"
 #include "channel.h"
-#include "nvmlwrap.h"
+//#include "nvmlwrap.h"
 #include "bootstrap.h"
 #include "transport.h"
 #include "group.h"
@@ -138,14 +138,14 @@ static ncclResult_t commFree(ncclComm_t comm) {
   if (comm->bootstrap)
     NCCLCHECK(bootstrapClose(comm->bootstrap));
 
-  CUDACHECK(cudaFree(comm->hostDevComm.channels));
-  CUDACHECK(cudaFree(comm->devComm));
+  //CUDACHECK(cudaFree(comm->hostDevComm.channels));
+  //CUDACHECK(cudaFree(comm->devComm));
 
   for (int channel=0; channel<comm->nChannels; channel++)
     NCCLCHECK(freeChannel(comm->channels+channel, comm->nRanks));
 
   if (comm->launchMode == ncclComm::GROUP) {
-    CUDACHECK(cudaStreamDestroy(comm->groupStream));
+  //  CUDACHECK(cudaStreamDestroy(comm->groupStream));
   }
 
   // Last rank frees shared resources between threads
@@ -192,12 +192,6 @@ static ncclResult_t commAlloc(ncclComm_t* comret, int ndev, int rank) {
   TRACE(NCCL_INIT,"comm %p rank %d nranks %d cudaDev %d busId %x", comm, rank, ndev, comm->cudaDev, comm->busId);
 
   comm->checkPointers = ncclParamCheckPointers() == 1 ? true : false;
-#if CUDART_VERSION >= 9020
-  comm->groupCudaStream = ncclParamGroupCudaStream();
-#else
-  // Don't allow the user to overload the default setting in older CUDA builds
-  comm->groupCudaStream = NCCL_GROUP_CUDA_STREAM;
-#endif
   comm->fatalError = ncclSuccess;
 
   NCCLCHECK(ncclCudaHostAlloc((void**) &comm->fatalDevError, (void**) &comm->hostDevComm.fatalDevError, sizeof(ncclDevError_t)));
@@ -244,7 +238,7 @@ static void showVersion() {
 
 static ncclResult_t fillInfo(struct ncclComm* comm, struct ncclPeerInfo* info, uint64_t commHash) {
   info->rank = comm->rank;
-  CUDACHECK(cudaGetDevice(&info->cudaDev));
+  //CUDACHECK(cudaGetDevice(&info->cudaDev));
   info->hostHash=getHostHash()+commHash;
   info->pidHash=getPidHash()+commHash;
 
@@ -357,13 +351,7 @@ ncclResult_t ncclCommSetIntra(struct ncclComm* comm, int rank, int ranks, struct
     comm->launchMode = ncclComm::PARALLEL;
   }
   if (comm->launchMode == ncclComm::GROUP) {
-    CUDACHECK(cudaStreamCreateWithFlags(&comm->groupStream, cudaStreamNonBlocking));
-#if CUDART_VERSION >= 9000
-    if (*comm->intraCC && (ncclCudaCompCap() == *comm->intraCC)) {
-      // Check whether the GPU supports Cooperative Group Multi Device Launch
-      (void) cudaDeviceGetAttribute(&cgMdLaunch, cudaDevAttrCooperativeMultiDeviceLaunch, comm->cudaDev);
-    }
-#endif
+    //CUDACHECK(cudaStreamCreateWithFlags(&comm->groupStream, cudaStreamNonBlocking));
   }
 
   // Disable cgMdLaunch if any rank does not support it
@@ -539,45 +527,14 @@ static ncclResult_t initTransportsRank(struct ncclComm* comm, ncclUniqueId* comm
   }
 
   // Determine the minimum CUDA Compute capability of all GPUs
-  int myCompCap = allGather3Data[rank].cudaCompCap;
-  int minCompCap = myCompCap, maxCompCap = myCompCap;
-  for (int i = 0; i < nranks; i++) {
-    minCompCap = std::min(allGather3Data[i].cudaCompCap, minCompCap);
-    maxCompCap = std::max(allGather3Data[i].cudaCompCap, maxCompCap);
-  }
-
   comm->nvlink = 1;
   for (int i = 0; i < nranks; i++) comm->nvlink &= allGather3Data[i].nvlink;
-
-  int nChannelsOrig = comm->nChannels;
-  struct ncclTopoRanks** allTopoRanks;
-  NCCLCHECK(ncclCalloc(&allTopoRanks, comm->nRanks));
-  for (int i=0; i<nranks; i++) {
-    allTopoRanks[i] = &allGather3Data[i].topoRanks;
-    // Make sure we align all ranks so that the tuning is consistent across ranks
-    treeGraph.nChannels = ringGraph.nChannels = comm->nChannels = std::min(allGather3Data[i].nChannels, comm->nChannels);
-    treeGraph.sameChannels = std::min(allGather3Data[i].tree.sameChannels, treeGraph.sameChannels);
-    treeGraph.speedIntra = std::min(allGather3Data[i].tree.speedIntra, treeGraph.speedIntra);
-    treeGraph.speedInter = std::min(allGather3Data[i].tree.speedInter, treeGraph.speedInter);
-    treeGraph.nvlink = std::min(allGather3Data[i].tree.nvlink, treeGraph.nvlink);
-    ringGraph.sameChannels = std::min(allGather3Data[i].ring.sameChannels, ringGraph.sameChannels);
-    ringGraph.speedIntra = std::min(allGather3Data[i].ring.speedIntra, ringGraph.speedIntra);
-    ringGraph.speedInter = std::min(allGather3Data[i].ring.speedInter, ringGraph.speedInter);
-    ringGraph.nvlink = std::min(allGather3Data[i].ring.nvlink, ringGraph.nvlink);
-  }
-
-  if (comm->nChannels < nChannelsOrig) {
-    // We started duplicating channels during Preset(), so we need to move the
-    // duplicated channels since we have removed some.
-    for (int i=0; i<comm->nChannels; i++) memcpy(comm->channels+comm->nChannels+i, comm->channels+nChannelsOrig+i, sizeof(struct ncclChannel));
-  }
 
   int *rings;
   NCCLCHECK(ncclCalloc(&rings, nranks*MAXCHANNELS));
 
   NCCLCHECK(ncclTopoPostset(comm, nodesFirstRank, allTopoRanks, rings));
 
-  free(allTopoRanks);
   free(nodesFirstRank);
   free(allGather3Data);
 
@@ -645,7 +602,7 @@ static ncclResult_t initTransportsRank(struct ncclComm* comm, ncclUniqueId* comm
 static ncclResult_t getCpuGpuAffinity(int cudaDev, cpu_set_t* mask) {
   CPU_ZERO_S(sizeof(cpu_set_t), mask);
   char* cudaPath;
-  NCCLCHECK(ncclTopoCudaPath(cudaDev, &cudaPath));
+  //NCCLCHECK(ncclTopoCudaPath(cudaDev, &cudaPath));
   char path[PATH_MAX];
   strncpy(path, cudaPath, PATH_MAX-1);
   snprintf(path+strlen(path), PATH_MAX-1-strlen(path), "/local_cpus");
@@ -670,25 +627,9 @@ static ncclResult_t setCpuAffinity(int cudaDev) {
   cpu_set_t mask;
   SYSCHECK(sched_getaffinity(0, sizeof(cpu_set_t), &mask), "sched_getaffinity");
 
-#ifdef ENABLE_TRACE
-  {
-    char affinityStr[sizeof(cpu_set_t)*2];
-    NCCLCHECK(ncclCpusetToStr(&mask, affinityStr));
-    TRACE(NCCL_INIT, "Current affinity for GPU %d is %s", cudaDev, affinityStr);
-  }
-#endif
-
   // Find the CPUs that are local to the supplied GPU
   cpu_set_t gpuMask;
   NCCLCHECK(getCpuGpuAffinity(cudaDev, &gpuMask));
-
-#ifdef ENABLE_TRACE
-  {
-    char affinityStr[sizeof(cpu_set_t)*2];
-    NCCLCHECK(ncclCpusetToStr(&gpuMask, affinityStr));
-    TRACE(NCCL_INIT, "CPU GPU affinity for GPU %d is %s", cudaDev, affinityStr);
-  }
-#endif
 
   cpu_set_t finalMask;
   if (ncclParamIgnoreCpuAffinity())
@@ -712,8 +653,8 @@ ncclResult_t ncclCommInitRankSync(ncclComm_t* newcomm, int nranks, ncclUniqueId 
   cpu_set_t affinitySave;
   sched_getaffinity(0, sizeof(cpu_set_t), &affinitySave);
 
-  NCCLCHECK(wrapNvmlSymbols());
-  NCCLCHECK(wrapNvmlInit());
+  //NCCLCHECK(wrapNvmlSymbols());
+  //NCCLCHECK(wrapNvmlInit());
 
   // Make sure all host memory allocation are close to the GPU
   CUDACHECK(cudaSetDevice(cudaDev));
@@ -725,7 +666,7 @@ ncclResult_t ncclCommInitRankSync(ncclComm_t* newcomm, int nranks, ncclUniqueId 
   NCCLCHECKGOTO(devCommSetup(*newcomm), res, cleanup);
 
   sched_setaffinity(0, sizeof(cpu_set_t), &affinitySave);
-  NCCLCHECKGOTO(wrapNvmlShutdown(), res, cleanup);
+  //NCCLCHECKGOTO(wrapNvmlShutdown(), res, cleanup);
 
   INFO(NCCL_INIT,"comm %p rank %d nranks %d cudaDev %d busId %x - Init COMPLETE", *newcomm, myrank, nranks, (*newcomm)->cudaDev, (*newcomm)->busId);
 

@@ -49,14 +49,7 @@ typedef enum cudaError cudaError_t;
 } while(true)
 
 // Propagate errors up
-#define NCCLCHECK(call) do { \
-  ncclResult_t res = call; \
-  if (res != ncclSuccess) { \
-    /* Print the back trace*/ \
-    INFO(NCCL_ALL,"%s:%d -> %d", __FILE__, __LINE__, res);    \
-    return res; \
-  } \
-} while (0);
+#define NCCLCHECK(call) do { } while (0);
 
 #define NCCLCHECKGOTO(call, res, label) do { \
   res = call; \
