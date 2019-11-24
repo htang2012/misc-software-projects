@@ -7,9 +7,9 @@
 
 all:
 	${MAKE} -C src  $*
-	${MAKE} -C tests  $*
+#	${MAKE} -C tests  $*
 
 clean:
-	${MAKE} -C src $*
+	${MAKE} -C src  clean
 
 
