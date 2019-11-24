@@ -9,12 +9,17 @@ include ../common.mk
 ##### src files
 INCEXPORTS  := nccl_net.h
 LIBSRCFILES :=  transport.cc shm.cc net.cc net_socket.cc 
+NCCL_MAJOR = 0
+NCCL_MINOR = 1
+NCCL_PATCH = 6
 
 ##### lib files
 LIBNAME     := tranport.so
+LIBTARGET  := $(LIBNAME:%=%.$(NCCL_MAJOR).$(NCCL_MINOR).$(NCCL_PATCH))
+LIBSONAME   := $(LIBNAME:%=%.1)
 STATICLIBNAME := libtransport_static.a
-BUILDDIR ?= $(abspath ../)
-INCDIR := $(BUILDDIR)/include
+BUILDDIR ?= $(abspath ../build)
+INCDIR := ../include
 LIBDIR := $(BUILDDIR)/lib
 OBJDIR := $(BUILDDIR)/obj
 
@@ -40,6 +45,7 @@ $(LIBDIR)/$(LIBTARGET) $(LIBDIR)/$(STATICLIBTARGET) : $(LIBOBJ)
 $(LIBDIR)/$(LIBTARGET): $(LIBOBJ) 
 	@printf "Linking    %-35s > %s\n" $(LIBTARGET) $@
 	mkdir -p $(LIBDIR)
+	echo $(LIBSONAME)
 	$(CXX) $(CXXFLAGS) -shared -Wl,--no-as-needed -Wl,-soname,$(LIBSONAME) -o $@ $(LIBOBJ) $(LDFLAGS)
 	ln -sf $(LIBSONAME) $(LIBDIR)/$(LIBNAME)
 	ln -sf $(LIBTARGET) $(LIBDIR)/$(LIBSONAME)
@@ -63,7 +69,7 @@ $(OBJDIR)/%.o : %.cc
 	@rm -f $(@:%.o=%.d.tmp)
 
 clean :
-	rm -rf ${INCDIR} ${LIBDIR} ${OBJDIR}
+	rm -rf ${LIBDIR} ${OBJDIR}
 
 install : lib
 	mkdir -p $(PREFIX)/lib
