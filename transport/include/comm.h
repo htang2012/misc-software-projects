@@ -8,7 +8,7 @@
 #define NCCL_COMM_H_
 
 #include "transport.h"
-#incldue "devcomm.h"
+#include "devcomm.h"
 
 #define DEFAULT_BUFFER_SIZE_BYTES (1LL << 22) /* 4MiB */
 
@@ -46,8 +46,6 @@ struct ncclRecvMem {
   };
   char buff[1]; // Actually larger than that
 };
-
-#define MAXCHANNELS 8
 
 struct ncclComm {
   struct ncclChannel channels[MAXCHANNELS];

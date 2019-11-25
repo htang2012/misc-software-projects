@@ -1,20 +1,14 @@
-#
-# Copyright (c) 2015-2019, NVIDIA CORPORATION. All rights reserved.
-#
-# See LICENSE.txt for license information
-#
-
 include ../common.mk
 
 ##### src files
-INCEXPORTS  := nccl_net.h
+INCEXPORTS  :=  nccl_net.h
 LIBSRCFILES :=  transport.cc shm.cc net.cc net_socket.cc 
 NCCL_MAJOR = 0
 NCCL_MINOR = 1
 NCCL_PATCH = 6
 
 ##### lib files
-LIBNAME     := tranport.so
+LIBNAME     := libtransport.so
 LIBTARGET  := $(LIBNAME:%=%.$(NCCL_MAJOR).$(NCCL_MINOR).$(NCCL_PATCH))
 LIBSONAME   := $(LIBNAME:%=%.1)
 STATICLIBNAME := libtransport_static.a

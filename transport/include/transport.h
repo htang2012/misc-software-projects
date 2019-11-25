@@ -10,29 +10,6 @@
 #include "core.h"
 #include "devcomm.h"
 
-/* Data types */
-typedef enum { ncclInt8       = 0, ncclChar       = 0,
-               ncclUint8      = 1,
-               ncclInt32      = 2, ncclInt        = 2,
-               ncclUint32     = 3,
-               ncclInt64      = 4,
-               ncclUint64     = 5,
-               ncclFloat16    = 6, ncclHalf       = 6,
-               ncclFloat32    = 7, ncclFloat      = 7,
-               ncclFloat64    = 8, ncclDouble     = 8,
-               ncclNumTypes   = 9 } ncclDataType_t;
-
-
-
-typedef enum { ncclSuccess                 =  0,
-               ncclUnhandledCudaError      =  1,
-               ncclSystemError             =  2,
-               ncclInternalError           =  3,
-               ncclInvalidArgument         =  4,
-               ncclInvalidUsage            =  5,
-               ncclNumResults              =  6 } ncclResult_t;
-
-
 #define NTRANSPORTS 3
 #define TRANSPORT_P2P 0
 #define TRANSPORT_SHM 1

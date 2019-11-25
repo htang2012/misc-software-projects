@@ -7,12 +7,10 @@
 #include "comm.h"
 #include "info.h"
 
-extern struct ncclTransport p2pTransport;
 extern struct ncclTransport shmTransport;
 extern struct ncclTransport netTransport;
 
 struct ncclTransport ncclTransports[NTRANSPORTS] = {
-  p2pTransport,
   shmTransport,
   netTransport,
 };
@@ -103,7 +101,7 @@ static ncclResult_t SaveProxy(int peer, struct ncclProxyArgs* args) {
   if (connector->transportComm->proxy == NULL) return ncclSuccess;
 
   struct ncclProxyArgs* op;
-  NCCLCHECK(transportAllocateProxyArgs(connector->comm, &op));
+  transportAllocateProxyArgs(connector->comm, &op);
   memcpy(op, args, sizeof(struct ncclProxyArgs));
   op->connector = connector;
   op->progress = connector->transportComm->proxy;
