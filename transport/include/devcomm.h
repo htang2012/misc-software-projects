@@ -7,7 +7,6 @@
 #ifndef NCCL_DEVICE_H_
 #define NCCL_DEVICE_H_
 
-#include "nccl.h"
 #include <stdint.h>
 
 #define NCCL_MAX_OPS 2048
@@ -33,7 +32,6 @@ union ncclLLFifoLine {
     uint32_t flag2;
   };
   uint64_t v[2];
-  int4 i4;
 };
 
 #define WARP_SIZE 32

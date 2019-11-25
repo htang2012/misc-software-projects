@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <algorithm> // For std::min/std::max
-#include "nccl.h"
 
 #ifdef PROFAPI
 #define NCCL_API(ret, func, args...)        \
@@ -62,10 +61,5 @@ typedef enum { ncclCollBroadcast, ncclCollReduce, ncclCollAllGather, ncclCollRed
 #define NCCL_PROTO_LL128 1
 #define NCCL_PROTO_SIMPLE 2
 
-#include "debug.h"
-#include "checks.h"
-#include "alloc.h"
-#include "utils.h"
-#include "param.h"
 
 #endif // end include guard

@@ -7,10 +7,31 @@
 #ifndef NCCL_TRANSPORT_H_
 #define NCCL_TRANSPORT_H_
 
-#include "devcomm.h"
-#include "graph.h"
-#include "nvmlwrap.h"
 #include "core.h"
+#include "devcomm.h"
+
+/* Data types */
+typedef enum { ncclInt8       = 0, ncclChar       = 0,
+               ncclUint8      = 1,
+               ncclInt32      = 2, ncclInt        = 2,
+               ncclUint32     = 3,
+               ncclInt64      = 4,
+               ncclUint64     = 5,
+               ncclFloat16    = 6, ncclHalf       = 6,
+               ncclFloat32    = 7, ncclFloat      = 7,
+               ncclFloat64    = 8, ncclDouble     = 8,
+               ncclNumTypes   = 9 } ncclDataType_t;
+
+
+
+typedef enum { ncclSuccess                 =  0,
+               ncclUnhandledCudaError      =  1,
+               ncclSystemError             =  2,
+               ncclInternalError           =  3,
+               ncclInvalidArgument         =  4,
+               ncclInvalidUsage            =  5,
+               ncclNumResults              =  6 } ncclResult_t;
+
 
 #define NTRANSPORTS 3
 #define TRANSPORT_P2P 0
@@ -19,6 +40,7 @@
 
 extern struct ncclTransport ncclTransports[];
 
+typedef ncclResult_t (*proxyProgressFunc_t)(struct ncclProxyArgs*);
 // Forward declarations
 struct ncclRing;
 struct ncclConnector;
@@ -42,7 +64,6 @@ struct ncclConnect {
 enum ncclProxyOpState { ncclProxyOpNone, ncclProxyOpReady, ncclProxyOpProgress };
 
 struct ncclProxyArgs;
-typedef ncclResult_t (*proxyProgressFunc_t)(struct ncclProxyArgs*);
 
 struct ncclProxyArgs {
   proxyProgressFunc_t progress;
