@@ -4,12 +4,6 @@
  * See LICENSE.txt for license information
  ************************************************************************/
 
-#include "comm.h"
-#include "core.h"
-#include "socket.h"
-#include "net.h"
-#include "param.h"
-
 #include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -17,6 +11,18 @@
 #include <poll.h>
 #include <limits.h>
 #include <fcntl.h>
+#include <stack.h>
+#include <netinet/ip.h>
+#include "param.h"
+
+#include "socket.h"
+
+
+#define MAX_IFS 16
+#define MAX_IF_NAME_SIZE 16
+#define SLEEP_INT            1000 // connection retry sleep interval in usec
+#define RETRY_REFUSED_TIMES   2e4 // connection refused retry times before reporting a timeout (20 sec)
+#define RETRY_TIMEDOUT_TIMES    3 // connection timed out retry times (each one can take 20s)
 
 /* Init functions */
 static char ncclNetIfNames[MAX_IF_NAME_SIZE*MAX_IFS];
@@ -30,7 +36,7 @@ ncclResult_t ncclSocketInit(ncclDebugLogger_t logFunction) {
     if (ncclNetIfs == -1) {
       ncclNetIfs = findInterfaces(ncclNetIfNames, ncclNetIfAddrs, MAX_IF_NAME_SIZE, MAX_IFS);
       if (ncclNetIfs <= 0) {
-        WARN("NET/Socket : no interface found");
+        NCCL_OFI_WARN("NET/Socket : no interface found");
         return ncclInternalError;
       } else {
         char line[1024];
@@ -41,7 +47,7 @@ ncclResult_t ncclSocketInit(ncclDebugLogger_t logFunction) {
               socketToString(&ncclNetIfAddrs[i].sa, addrline));
         }
         line[1023] = '\0';
-        INFO(NCCL_INIT|NCCL_NET,"NET/Socket : Using%s", line);
+        NCCL_OFI_INFO(NCCL_INIT|NCCL_NET,"NET/Socket : Using%s", line);
       }
     }
     pthread_mutex_unlock(&ncclSocketLock);
@@ -64,7 +70,7 @@ ncclResult_t ncclSocketPciPath(int dev, char** path) {
   snprintf(devicepath, PATH_MAX, "/sys/class/net/%s/device", ncclNetIfNames+dev*MAX_IF_NAME_SIZE);
   *path = realpath(devicepath, NULL);
   if (*path == NULL) {
-    INFO(NCCL_NET|NCCL_INIT, "Could not find real path of %s", devicepath);
+    NCCL_OFI_INFO(NCCL_NET|NCCL_INIT, "Could not find real path of %s", devicepath);
     return ncclSystemError;
   }
   return ncclSuccess;
@@ -165,7 +171,7 @@ void* persistentSocketThread(void *args_) {
           if (r != NULL && r->used == 1 && r->offset < r->size) {
             r->result = socketProgress(r->op, r->fd, r->data, r->size, &r->offset);
             if (r->result != ncclSuccess) {
-              WARN("NET/Socket : socket progress error");
+              NCCL_OFI_WARN("NET/Socket : socket progress error");
               return NULL;
             }
             idle = 0;
@@ -189,7 +195,7 @@ ncclResult_t ncclSocketGetNsockNthread(int dev, int* ns, int* nt) {
   int nSocksPerThread = ncclParamSocketNsocksPerThread();
   int nThreads = ncclParamSocketNthreads();
   if (nThreads > MAX_THREADS) {
-    WARN("NET/Socket : NCCL_SOCKET_NTHREADS is greater than the maximum allowed, setting to %d", MAX_THREADS);
+    NCCL_OFI_WARN("NET/Socket : NCCL_SOCKET_NTHREADS is greater than the maximum allowed, setting to %d", MAX_THREADS);
     nThreads = MAX_THREADS;
   }
   if (nThreads == -2 || nSocksPerThread == -2) {
@@ -203,7 +209,7 @@ ncclResult_t ncclSocketGetNsockNthread(int dev, int* ns, int* nt) {
     if (fd == -1) {
       // Could not find device vendor. This is handled silently so
       // we don't want to print an INFO error.
-      TRACE(NCCL_NET, "Open of %s failed : %s\n", vendorPath, strerror(errno));
+      NCCL_OFI_TRACE(NCCL_NET, "Open of %s failed : %s\n", vendorPath, strerror(errno));
       goto end;
     }
     char vendor[7];
@@ -225,23 +231,27 @@ end:
   int nSocks = nSocksPerThread * nThreads;
   if (nSocks > MAX_SOCKETS) {
     nSocksPerThread = MAX_SOCKETS/nThreads;
-    WARN("NET/Socket : the total number of sockets is greater than the maximum allowed, setting NCCL_NSOCKS_PERTHREAD to %d", nSocksPerThread);
+    NCCL_OFI_WARN("NET/Socket : the total number of sockets is greater than the maximum allowed, setting NCCL_NSOCKS_PERTHREAD to %d", nSocksPerThread);
     nSocks = nSocksPerThread * nThreads;
   }
   *ns = nSocks;
   *nt = nThreads;
-  if (nSocks > 0) INFO(NCCL_INIT, "NET/Socket: Using %d threads and %d sockets per thread", nThreads, nSocksPerThread);
+  if (nSocks > 0) NCCL_OFI_INFO(NCCL_INIT, "NET/Socket: Using %d threads and %d sockets per thread", nThreads, nSocksPerThread);
   return ncclSuccess;
 }
 
+struct ts {
+	int a, b;
+};
+
 ncclResult_t ncclSocketNewListenComm(struct ncclSocketListenComm** comm) {
-  NCCLCHECK(ncclCalloc(comm, 1));
+  (*comm) = (struct ncclSocketListenComm *)calloc(1, sizeof(struct ncclSocketListenComm));
   (*comm)->fd = -1;
   return ncclSuccess;
 }
 
 ncclResult_t ncclSocketNewComm(struct ncclSocketComm** comm) {
-  NCCLCHECK(ncclCalloc(comm, 1));
+  (*comm) = (struct ncclSocketComm *) calloc ( 1, sizeof( struct ncclSocketComm));
   (*comm)->ctrlFd = -1;
   for (int i=0; i < MAX_SOCKETS; i++) {
     (*comm)->fds[i] = -1;
@@ -321,7 +331,7 @@ ncclResult_t ncclSocketGetRequest(struct ncclSocketComm* comm, int op, void* dat
       return ncclSuccess;
     }
   }
-  WARN("NET/Socket : unable to allocate requests");
+  NCCL_OFI_WARN("NET/Socket : unable to allocate requests");
   return ncclInternalError;
 }
 
@@ -331,7 +341,8 @@ ncclResult_t ncclSocketGetTask(struct ncclSocketComm* comm, int op, void* data, 
   struct ncclSocketTaskQueue* queue = &res->threadTaskQueue;
   // create helper threads and prepare per-thread task queue
   if (queue->tasks == NULL) {
-    NCCLCHECK(ncclCalloc(&queue->tasks, MAX_QUEUE_LEN));
+    //NCCLCHECK(ncclCalloc(&queue->tasks, MAX_QUEUE_LEN));
+    queue->tasks = (struct  ncclSocketTask * ) calloc(MAX_QUEUE_LEN, sizeof(struct ncclSocketTask));
     queue->next = 0;
     res->comm = comm;
     pthread_mutex_init(&res->threadLock, NULL);
@@ -356,7 +367,7 @@ ncclResult_t ncclSocketGetTask(struct ncclSocketComm* comm, int op, void* data, 
     pthread_mutex_unlock(&res->threadLock);
     return ncclSuccess;
   }
-  WARN("NET/Socket : unable to allocate subtasks");
+  NCCL_OFI_WARN("NET/Socket : unable to allocate subtasks");
   return ncclInternalError;
 }
 
@@ -364,7 +375,7 @@ ncclResult_t ncclSocketTest(void* request, int* done, int* size) {
   *done = 0;
   struct ncclSocketRequest *r = (struct ncclSocketRequest*)request;
   if (r == NULL) {
-    WARN("NET/Socket : test called with NULL request");
+    NCCL_OFI_WARN("NET/Socket : test called with NULL request");
     return ncclInternalError;
   }
   if (r->used == 1) { /* try to send/recv size */
@@ -379,7 +390,7 @@ ncclResult_t ncclSocketTest(void* request, int* done, int* size) {
 
     // Check size is less or equal to the size provided by the user
     if (r->op == NCCL_SOCKET_RECV && data > r->size) {
-      WARN("NET/Socket : message truncated : receiving %d bytes instead of %d", data, r->size);
+      NCCL_OFI_WARN("NET/Socket : message truncated : receiving %d bytes instead of %d", data, r->size);
       return ncclInternalError;
     }
     r->size = data;
@@ -388,9 +399,9 @@ ncclResult_t ncclSocketTest(void* request, int* done, int* size) {
     // divide into subtasks
     int chunkOffset = 0, i = 0;
     if (r->comm->nSocks > 0) {
-      int taskSize = std::max(MIN_CHUNKSIZE, DIVUP(r->size, r->comm->nSocks));
+      int taskSize = MIN_CHUNKSIZE > DIVUP(r->size, r->comm->nSocks) ? MIN_CHUNKSIZE : DIVUP(r->size, r->comm->nSocks);
       while (chunkOffset < r->size) {
-        int chunkSize = std::min(taskSize, r->size-chunkOffset);
+        int chunkSize = taskSize > r->size-chunkOffset ? r->size-chunkOffset : taskSize;
         NCCLCHECK(ncclSocketGetTask(r->comm, r->op, (char*)(r->data)+chunkOffset, chunkSize, r->tasks+i++));
         chunkOffset += chunkSize;
       }
@@ -482,7 +493,8 @@ ncclResult_t ncclSocketClose(void* opaqueComm) {
   return ncclSuccess;
 }
 
-ncclNet_t ncclNetSocket = {
+//ncclNet_t ncclNetSocket = {
+ncclNet_t NCCL_PLUGIN_SYMBOL = {	
   "Socket",
   ncclSocketInit,
   ncclSocketDevices,

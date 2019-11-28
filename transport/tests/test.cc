@@ -5,6 +5,7 @@
 #include "nccl_net.h"
 #include "transport.h"
 #include "comm.h"
+#include "utils.h"
 #include <socket.h>
 
 typedef unsigned long uint64_t;
