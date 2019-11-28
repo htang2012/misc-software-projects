@@ -1,6 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sched.h>
+#include <fcntl.h>
+#include <string.h>
+#include <errno.h>
+#include <assert.h>
+#include <dlfcn.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <string.h>
 #include "nccl_net.h"
 #include "transport.h"
@@ -9,6 +18,20 @@
 #include <socket.h>
 
 typedef unsigned long uint64_t;
+
+#define STR2(v) #v
+#define STR(v) STR2(v)
+
+// Returns ncclInternalError if anything fails, causing that network to be ignored.
+ncclResult_t initNet(ncclNet_t* net) {
+  int ndev;
+  //if (net->init(ncclDebugLog) != ncclSuccess) return ncclInternalError;
+  if (net->devices(&ndev) != ncclSuccess) return ncclInternalError;
+  if (ndev <= 0) return ncclSystemError;
+  return ncclSuccess;
+}
+
+
 
 static uint64_t getHostHash(const char* string) {
   // Based on DJB2, result = result * 33 + char
@@ -64,12 +87,42 @@ ncclResult_t bootstrapNetInit() {
 }
 
 
+ncclResult_t initNetPlugin(ncclNet_t** net) {
+  void* netPluginLib = dlopen("libtransport.so", RTLD_NOW | RTLD_LOCAL);
+  if (netPluginLib == NULL) {
+    // dlopen does not guarantee to set errno, but dlerror only gives us a
+    // string, so checking errno doesn't hurt to try to provide a better
+    // error message
+    if (errno == ENOENT) {
+      printf("NET/Plugin : No plugin found (libnccl-net.so), using internal implementation");
+    } else {
+      printf("NET/Plugin : Plugin load returned %d : %s.", errno, dlerror());
+    }
+    return ncclSuccess;
+  }
+  ncclNet_t* extNet = (ncclNet_t*) dlsym(netPluginLib, STR(NCCL_PLUGIN_SYMBOL));
+  if (extNet == NULL) {
+    printf("NET/Plugin: Failed to find " STR(NCCL_PLUGIN_SYMBOL) " symbol.");
+    goto cleanup;
+  }
+  if (initNet(extNet) == ncclSuccess) {
+    *net = extNet;
+    return ncclSuccess;
+  }
+cleanup:
+  if (netPluginLib != NULL) dlclose(netPluginLib);
+  return ncclSuccess;
+}
 
 
+
+ncclNet_t* ncclNet = NULL;
 int main(int argc, char* argv[])
 {
   ncclComm_t comm;
   bootstrapNetInit();
+  initNetPlugin(&ncclNet);
+    
 
   printf("Success \n");
   return 0;
