@@ -51,7 +51,6 @@ union ncclLLFifoLine {
 #define NCCL_LL_FLAG(a) ((uint32_t)(a))
 #endif
 // Make sure the clean mask will last for at least NCCL_NSTEPS
-static_assert(NCCL_LL_CLEAN_MASK % NCCL_STEPS == 0, "Invalid NCCL_LL_CLEAN_MASK value");
 
 #define NCCL_LL128_LINESIZE 128
 #define NCCL_LL128_LINEELEMS (NCCL_LL128_LINESIZE/sizeof(uint64_t))
@@ -161,7 +160,6 @@ struct ncclColl {
     int data[0x10];
   };
 };
-static_assert(sizeof(struct ncclColl) == (0x10*sizeof(int)), "ncclColl must have a pow2 size");
 
 struct ncclChannel {
   union {
@@ -189,7 +187,6 @@ struct ncclChannel {
     int data[0x80];
   };
 };
-static_assert(sizeof(struct ncclChannel) == 0x80*sizeof(int), "ncclChannel must have a pow2 size");
 
 typedef enum {
   ncclDevSuccess,

@@ -7,8 +7,6 @@
 #ifndef NCCL_H_
 #define NCCL_H_
 
-#include <cuda_runtime.h>
-#include <cuda_fp16.h>
 
 #define NCCL_MAJOR 2
 #define NCCL_MINOR 5
@@ -141,10 +139,6 @@ typedef enum { ncclInt8       = 0, ncclChar       = 0,
  *
  * In-place operation will happen if sendbuff == recvbuff.
  */
-ncclResult_t  ncclReduce(const void* sendbuff, void* recvbuff, size_t count, ncclDataType_t datatype,
-    ncclRedOp_t op, int root, ncclComm_t comm, cudaStream_t stream);
-ncclResult_t pncclReduce(const void* sendbuff, void* recvbuff, size_t count, ncclDataType_t datatype,
-    ncclRedOp_t op, int root, ncclComm_t comm, cudaStream_t stream);
 
 /*
  * (deprecated) Broadcast (in-place)
@@ -155,10 +149,6 @@ ncclResult_t pncclReduce(const void* sendbuff, void* recvbuff, size_t count, ncc
  *
  * This operation is implicitely in place.
  */
-ncclResult_t  ncclBcast(void* buff, size_t count, ncclDataType_t datatype, int root,
-    ncclComm_t comm, cudaStream_t stream);
-ncclResult_t pncclBcast(void* buff, size_t count, ncclDataType_t datatype, int root,
-    ncclComm_t comm, cudaStream_t stream);
 
 /*
  * Broadcast
@@ -169,11 +159,6 @@ ncclResult_t pncclBcast(void* buff, size_t count, ncclDataType_t datatype, int r
  *
  * In-place operation will happen if sendbuff == recvbuff.
  */
-ncclResult_t  ncclBroadcast(const void* sendbuff, void* recvbuff, size_t count, ncclDataType_t datatype, int root,
-    ncclComm_t comm, cudaStream_t stream);
-ncclResult_t pncclBroadcast(const void* sendbuff, void* recvbuff, size_t count, ncclDataType_t datatype, int root,
-    ncclComm_t comm, cudaStream_t stream);
-
 /*
  * All-Reduce
  *
@@ -182,10 +167,6 @@ ncclResult_t pncclBroadcast(const void* sendbuff, void* recvbuff, size_t count, 
  *
  * In-place operation will happen if sendbuff == recvbuff.
  */
-ncclResult_t  ncclAllReduce(const void* sendbuff, void* recvbuff, size_t count,
-    ncclDataType_t datatype, ncclRedOp_t op, ncclComm_t comm, cudaStream_t stream);
-ncclResult_t pncclAllReduce(const void* sendbuff, void* recvbuff, size_t count,
-    ncclDataType_t datatype, ncclRedOp_t op, ncclComm_t comm, cudaStream_t stream);
 
 /*
  * Reduce-Scatter
@@ -198,13 +179,6 @@ ncclResult_t pncclAllReduce(const void* sendbuff, void* recvbuff, size_t count,
  *
  * In-place operations will happen if recvbuff == sendbuff + rank * recvcount.
  */
-ncclResult_t  ncclReduceScatter(const void* sendbuff, void* recvbuff,
-    size_t recvcount, ncclDataType_t datatype, ncclRedOp_t op, ncclComm_t comm,
-    cudaStream_t stream);
-ncclResult_t pncclReduceScatter(const void* sendbuff, void* recvbuff,
-    size_t recvcount, ncclDataType_t datatype, ncclRedOp_t op, ncclComm_t comm,
-    cudaStream_t stream);
-
 /*
  * All-Gather
  *
@@ -215,11 +189,6 @@ ncclResult_t pncclReduceScatter(const void* sendbuff, void* recvbuff,
  *
  * In-place operations will happen if sendbuff == recvbuff + rank * sendcount.
  */
-ncclResult_t  ncclAllGather(const void* sendbuff, void* recvbuff, size_t sendcount,
-    ncclDataType_t datatype, ncclComm_t comm, cudaStream_t stream);
-ncclResult_t pncclAllGather(const void* sendbuff, void* recvbuff, size_t sendcount,
-    ncclDataType_t datatype, ncclComm_t comm, cudaStream_t stream);
-
 /*
  * Group semantics
  *

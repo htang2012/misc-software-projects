@@ -13,7 +13,7 @@ extern "C" {
 #include <nccl_ofi_log.h>
 #include <nccl.h>
 #include <stdlib.h>
-
+#include <string.h>
 /*
  * @brief	Allocate stack of free indexes
  */
