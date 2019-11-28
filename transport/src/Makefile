@@ -2,7 +2,7 @@ include ../common.mk
 
 ##### src files
 INCEXPORTS  :=  nccl_net.h
-LIBSRCFILES :=  net_socket.cc  utils.cc
+LIBSRCFILES :=  net_socket.cc  
 NCCL_MAJOR = 0
 NCCL_MINOR = 1
 NCCL_PATCH = 6

@@ -70,6 +70,7 @@ int main(int argc, char* argv[])
 {
   ncclComm_t comm;
   bootstrapNetInit();
+
   printf("Success \n");
   return 0;
 }
