@@ -17,6 +17,7 @@
 #include "utils.h"
 #include <socket.h>
 
+
 typedef unsigned long uint64_t;
 
 #define STR2(v) #v
@@ -121,7 +122,9 @@ int main(int argc, char* argv[])
 {
   ncclComm_t comm;
   bootstrapNetInit();
+  extern ncclNet_t ncclNetSocket;
   initNetPlugin(&ncclNet);
+  initNet(&ncclNetSocket);
     
 
   printf("Success \n");

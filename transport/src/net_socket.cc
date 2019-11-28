@@ -493,8 +493,7 @@ ncclResult_t ncclSocketClose(void* opaqueComm) {
   return ncclSuccess;
 }
 
-//ncclNet_t ncclNetSocket = {
-ncclNet_t NCCL_PLUGIN_SYMBOL = {	
+ncclNet_t ncclNetSocket = {
   "Socket",
   ncclSocketInit,
   ncclSocketDevices,
