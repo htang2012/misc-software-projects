@@ -1,9 +1,13 @@
 .PHONY: all clean
 
 
-all: test
-test:
-	g++ -I /usr/local/cuda-10.0/include -I ../include -g test.cc  -L../build/lib  -ltransport -ldl -lpthread -o test
+run: bootstrap #test bootstrap
+	g++ -L../build/lib -ltransport -ldl -lpthread -g run
 
+test.o:
+	g++ -I /usr/local/cuda-10.0/include -I ../include -c test.cc 
+
+bootstrap.o:
+	g++ -I /usr/local/cuda-10.0/include -I ../include -c bootstrap.cc
 clean:
-	rm test    
+	rm run    

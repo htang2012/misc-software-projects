@@ -240,10 +240,6 @@ end:
   return ncclSuccess;
 }
 
-struct ts {
-	int a, b;
-};
-
 ncclResult_t ncclSocketNewListenComm(struct ncclSocketListenComm** comm) {
   (*comm) = (struct ncclSocketListenComm *)calloc(1, sizeof(struct ncclSocketListenComm));
   (*comm)->fd = -1;
@@ -493,7 +489,7 @@ ncclResult_t ncclSocketClose(void* opaqueComm) {
   return ncclSuccess;
 }
 
-ncclNet_t ncclNetSocket = {
+__attribute__((visibility("default"))) ncclNet_t  NCCL_PLUGIN_SYMBOL = {
   "Socket",
   ncclSocketInit,
   ncclSocketDevices,
