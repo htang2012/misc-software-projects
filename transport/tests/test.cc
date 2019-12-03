@@ -15,6 +15,7 @@
 #include "transport.h"
 #include "comm.h"
 #include "utils.h"
+#include "net.h"
 #include <socket.h>
 
 
@@ -22,6 +23,45 @@ typedef unsigned long uint64_t;
 
 #define STR2(v) #v
 #define STR(v) STR2(v)
+
+
+/* Init functions */
+static char bootstrapNetIfNames[MAX_IF_NAME_SIZE*MAX_IFS];
+static union socketAddress bootstrapNetIfAddrs[MAX_IFS];
+pthread_mutex_t bootstrapNetLock = PTHREAD_MUTEX_INITIALIZER;
+static int bootstrapNetIfs = -1;
+
+struct bootstrapNetComm {
+  int fd;
+};
+
+/* Socket Interface Selection type */
+enum bootstrapInterface_t { findSubnetIf = -1, dontCareIf = -2 };
+
+static ncclResult_t bootstrapNetNewComm(struct bootstrapNetComm** comm) {
+        (*comm) = (struct bootstrapNetComm *) calloc(1, sizeof(struct bootstrapNetComm));
+        (*comm)->fd = -1;
+        return ncclSuccess;
+}
+
+static ncclResult_t bootstrapNetAccept(void* listenComm, void** recvComm) {
+  struct bootstrapNetComm* lComm = (struct bootstrapNetComm*)listenComm;
+  struct bootstrapNetComm* rComm;
+  bootstrapNetNewComm(&rComm);
+  struct sockaddr_in sockaddr;
+  socklen_t socklen = sizeof(struct sockaddr_in);
+  accept(lComm->fd, (struct sockaddr*)&sockaddr, &socklen);
+  *recvComm = rComm;
+  return ncclSuccess;
+}
+
+
+
+static ncclResult_t bootstrapNetGetSocketAddr(int dev, union socketAddress* addr) {
+      if (dev >= bootstrapNetIfs) return ncclInternalError;
+        memcpy(addr, bootstrapNetIfAddrs+dev, sizeof(*addr));
+          return ncclSuccess;
+}
 
 // Returns ncclInternalError if anything fails, causing that network to be ignored.
 ncclResult_t initNet(ncclNet_t* net) {
@@ -32,6 +72,11 @@ ncclResult_t initNet(ncclNet_t* net) {
   return ncclSuccess;
 }
 
+ncclResult_t bootstrapNetCreateHandle(ncclNetHandle_t* netHandle, const char* str) {
+      union socketAddress* connectAddr = (union socketAddress*) netHandle;
+      GetSocketAddrFromString(connectAddr, str);
+      return ncclSuccess;
+}
 
 
 static uint64_t getHostHash(const char* string) {
@@ -54,15 +99,7 @@ static void getHostName(char* hostname, int maxlen) {
 }
 
 
-struct bootstrapNetComm {
-  int fd;
-};
 
-/* Init functions */
-static char bootstrapNetIfNames[MAX_IF_NAME_SIZE*MAX_IFS];
-static union socketAddress bootstrapNetIfAddrs[MAX_IFS];
-static int bootstrapNetIfs = -1;
-pthread_mutex_t bootstrapNetLock = PTHREAD_MUTEX_INITIALIZER;
 
 ncclResult_t bootstrapNetInit() {
   if (bootstrapNetIfs == -1) {
@@ -116,15 +153,135 @@ cleanup:
 }
 
 
+ncclResult_t bootstrapNetListen(int dev, ncclNetHandle_t* netHandle, void** listenComm);
+void *bootstrapRoot(void* listenComm);
+
+ncclResult_t bootstrapCreateRoot(ncclUniqueId* id, bool idFromEnv) {
+  ncclNetHandle_t* netHandle = (ncclNetHandle_t*) id;
+  void* listenComm;
+  bootstrapNetListen(idFromEnv ? dontCareIf : 0, netHandle, &listenComm);
+  pthread_t thread;
+  pthread_create(&thread, NULL, bootstrapRoot, listenComm);
+  return ncclSuccess;
+}
+
+
+ncclResult_t bootstrapGetUniqueId(ncclUniqueId* id) {
+  static_assert(sizeof(ncclNetHandle_t) < sizeof(ncclUniqueId), "NetId does not fit inside ncclUniqueId");
+  memset(id, 0, sizeof(ncclUniqueId));
+  ncclNetHandle_t* netHandle = (ncclNetHandle_t*) id;
+
+  char* env = getenv("NCCL_COMM_ID");
+  if (env) {
+    if (bootstrapNetCreateHandle(netHandle, env) != 0) {
+      printf("Invalid NCCL_COMM_ID, please use format: <ipv4>:<port> or [<ipv6>]:<port> or <hostname>:<port>");
+      return ncclInvalidArgument;
+    }
+  } else {
+    NCCLCHECK(bootstrapCreateRoot(id, false));
+  }
+
+  return ncclSuccess;
+}
+
+
+
+ncclResult_t bootstrapNetListen(int dev, ncclNetHandle_t* netHandle, void** listenComm) {
+  union socketAddress* connectAddr = (union socketAddress*) netHandle;
+  static_assert(sizeof(union socketAddress) < NCCL_NET_HANDLE_MAXSIZE, "union socketAddress size is too large");
+  // if dev >= 0, listen based on dev
+  if (dev >= 0) {
+    bootstrapNetGetSocketAddr(dev, connectAddr);
+  } else if (dev == findSubnetIf) {
+    // handle stores a remote address
+    // need to find a local addr that is in the same network as the remote addr
+    union socketAddress localAddr;
+    char ifName[MAX_IF_NAME_SIZE];
+    if (findInterfaceMatchSubnet(ifName, &localAddr, connectAddr, MAX_IF_NAME_SIZE, 1) <= 0) {
+      printf("NET/Socket : No usable listening interface found");
+      return ncclSystemError;
+    }
+    // pass the local address back
+    memcpy(connectAddr, &localAddr, sizeof(localAddr));
+  } // Otherwise, handle stores a local address
+  struct bootstrapNetComm* comm;
+  bootstrapNetNewComm(&comm);
+  createListenSocket(&comm->fd, connectAddr);
+  *listenComm = comm;
+  return ncclSuccess;
+}
+
+
+struct extInfo info;
+
+void *bootstrapRoot(void* listenComm) {
+  ncclNetHandle_t *rankHandles = NULL;
+  ncclNetHandle_t *rankHandlesRoot = NULL; // for initial rank <-> root information exchange
+  ncclNetHandle_t zero = { 0 }; // for sanity checking
+  void* tmpComm;
+  ncclResult_t res;
+  setFilesLimit();
+
+  /* Receive addresses from all ranks */
+  int nranks = 0, c = 0;
+  do {
+    bootstrapNetAccept(listenComm, &tmpComm);
+    bootstrapNetRecv(tmpComm, &info, sizeof(info));
+    bootstrapNetCloseRecv(tmpComm);
+
+    if (c == 0) {
+      nranks = info.nranks;
+      ncclCalloc(&rankHandles, nranks);
+      ncclCalloc(&rankHandlesRoot, nranks);
+    }
+
+    if (nranks != info.nranks) {
+      printf("Bootstrap Root : mismatch in rank count from procs %d : %d", nranks, info.nranks);
+      goto out;
+    }
+
+    if (memcmp(&zero, &rankHandlesRoot[info.rank], sizeof(ncclNetHandle_t)) != 0) {
+      printf("Bootstrap Root : rank %d of %d ranks has already checked in", info.rank, nranks);
+      goto out;
+    }
+   // Save the connection handle for that rank
+    memcpy(rankHandlesRoot+info.rank, info.extHandleListenRoot, sizeof(ncclNetHandle_t));
+    memcpy(rankHandles+info.rank, info.extHandleListen, sizeof(ncclNetHandle_t));
+
+    ++c;
+  } while (c < nranks);
+
+  // Send the connect handle for the next rank in the AllGather ring
+  for (int r=0; r<nranks; ++r) {
+    int next = (r+1) % nranks;
+    void *tmpSendComm;
+    bootstrapNetConnect(0, rankHandlesRoot+r, &tmpSendComm);
+    bootstrapNetSend(tmpSendComm, rankHandles+next, sizeof(ncclNetHandle_t));
+    bootstrapNetCloseSend(tmpSendComm));
+  }
+
+out:
+  bootstrapNetCloseListen(listenComm);
+  if (rankHandles) free(rankHandles);
+  if (rankHandlesRoot) free(rankHandlesRoot);
+
+  return NULL;
+}
+
 
 ncclNet_t* ncclNet = NULL;
 int main(int argc, char* argv[])
 {
   ncclComm_t comm;
   bootstrapNetInit();
-  extern ncclNet_t ncclNetSocket;
+  extern ncclNet_t NCCL_PLUGIN_SYMBOL;
   initNetPlugin(&ncclNet);
-  initNet(&ncclNetSocket);
+  initNet(&NCCL_PLUGIN_SYMBOL);
+  ncclNet_t & net = NCCL_PLUGIN_SYMBOL;
+  ncclUniqueId out;
+  bootstrapGetUniqueId(&out);
+
+
     
 
   printf("Success \n");

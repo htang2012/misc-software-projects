@@ -12,6 +12,21 @@
 
 extern ncclNet_t* ncclNet;
 typedef char ncclNetHandle_t[NCCL_NET_HANDLE_MAXSIZE];
+#ifndef NCCLCHECK
+// Propagate errors up
+#define NCCLCHECK(call) do { \
+        ncclResult_t res = call; \
+        if (res != ncclSuccess) { \
+                /* Print the back trace*/ \
+                return res; \
+        } \
+} while (0)
+
+#endif
+
+
+
+#define CUDACHECKGOTO(cmd, res, label) do { cmd; } while(false)
 
 // Translation to external API
 static const char* ncclNetName() { return ncclNet->name; }
@@ -42,18 +57,16 @@ static ncclResult_t ncclNetPtrSupport(int dev, int* supportedTypes) {
     void* gpuPtr = NULL;
     void* mHandle = NULL;
     ncclResult_t res;
-    NCCLCHECKGOTO(ncclNetListen(dev, &handle, &lComm), res, cleanup);
-    NCCLCHECKGOTO(ncclNetConnect(dev, &handle, &sComm), res, cleanup);
-    NCCLCHECKGOTO(ncclNetAccept(lComm, &rComm), res, cleanup);
-    CUDACHECKGOTO(cudaMalloc(&gpuPtr, GPU_BUF_SIZE), res, cleanup);
-    NOWARN(ncclNetRegMr(sComm, gpuPtr, GPU_BUF_SIZE, NCCL_PTR_CUDA, &mHandle), res);
+    ncclNetListen(dev, &handle, &lComm);
+    ncclNetConnect(dev, &handle, &sComm);
+    ncclNetAccept(lComm, &rComm);
+    ncclNetRegMr(sComm, gpuPtr, GPU_BUF_SIZE, NCCL_PTR_CUDA, &mHandle);
     if (res != ncclSuccess) goto cleanup;
-    NCCLCHECKGOTO(ncclNetDeregMr(sComm, mHandle), res, cleanup);
-    NCCLCHECKGOTO(ncclNetRegMr(rComm, gpuPtr, GPU_BUF_SIZE, NCCL_PTR_CUDA, &mHandle), res, cleanup);
-    NCCLCHECKGOTO(ncclNetDeregMr(rComm, mHandle), res, cleanup);
+    ncclNetDeregMr(sComm, mHandle);
+    ncclNetRegMr(rComm, gpuPtr, GPU_BUF_SIZE, NCCL_PTR_CUDA, &mHandle);
+    ncclNetDeregMr(rComm, mHandle);
     *supportedTypes |= NCCL_PTR_CUDA;
 cleanup:
-    if (gpuPtr) cudaFree(gpuPtr);
     if (rComm) ncclNetCloseRecv(rComm);
     if (sComm) ncclNetCloseSend(sComm);
     if (lComm) ncclNetCloseListen(lComm);

@@ -49,6 +49,7 @@
                               } \
 } while(true)
 
+#ifndef NCCLCHECK
 // Propagate errors up
 #define NCCLCHECK(call) do { \
         ncclResult_t res = call; \
@@ -59,7 +60,7 @@
         } \
 } while (0)
 
-
+#endif
 /* Common socket address storage structure for IPv4/IPv6 */
 union socketAddress {
   struct sockaddr sa;
